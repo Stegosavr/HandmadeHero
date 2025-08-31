@@ -1,0 +1,41 @@
+struct window_size
+{
+	int Width;
+	int Height;
+};
+
+struct win32_offscreen_buffer
+{
+	// NOTE(casey): Pixels are always 32-bits wide, BB GG RR XX
+	BITMAPINFO Info;
+	void *Memory;
+	int Width;
+	int Height;
+	int Pitch;
+	int BytesPerPixel;
+};
+
+struct win32_sound_output
+{
+	int SamplesPerSecond;
+	uint32 RunningSampleIndex;
+	int BytesPerSample;
+	DWORD BufferSize;
+	DWORD SafetyBytes;
+	int LatencySampleCount;
+	// TODO(casey): Math gets simples if we add a "BytesPerSecond" field?
+	// TODO(casey): Maybe RunningIndex should be in bytes
+};
+
+struct win32_debug_time_marker
+{
+	DWORD OutputPlayCursor;
+	DWORD OutputWriteCursor;
+	DWORD OutputLocation;
+	DWORD OutputByteCount;
+
+	DWORD ExpectedFlipPlayCursor;
+	DWORD FlipPlayCursor;
+	DWORD FlipWriteCursor;
+};
+
