@@ -30,29 +30,7 @@
  Just a partial list of stuff!
 */
 
-#include <stdint.h>
-// TODO(casey): implement sinf ourselves
-#include <math.h>
-
-#define internal 		static 
-#define global_variable static 
-#define local_persist 	static 
-
-#define Pi32 3.14159265359f
-
-// TODO(grigory): get rid of 'float' type, so we can know actual size of variables
-// btw do it using vim replace or smth
-typedef uint8_t uint8;
-typedef uint16_t uint16;
-typedef uint32_t uint32;
-typedef uint64_t uint64;
-
-typedef int8_t int8;
-typedef int16_t int16;
-typedef int32_t int32;
-typedef int64_t int64;
-
-#include "handmade.cpp"
+#include "handmade.h"
 
 #include <windows.h>
 #include <malloc.h>
@@ -92,12 +70,19 @@ global_variable x_input_set_state *XInputSetState_ = XInputSetStateStub;
 #define XInputSetState XInputSetState_
 
 
-
 #define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter);
 typedef DIRECT_SOUND_CREATE(direct_sound_create);
 
-internal debug_read_file_result 
-DEBUGPlatformReadEntireFile(char *Filename)
+
+DEBUG_PLATFORM_FREE_FILE_MEMORY(DEBUGPlatformFreeFileMemory)
+{
+	if (FileMemory)
+	{
+		VirtualFree(FileMemory, 0, MEM_RELEASE);
+	}
+}
+
+DEBUG_PLATFORM_READ_ENTIRE_FILE(DEBUGPlatformReadEntireFile)
 {
 	debug_read_file_result Result = {};
 
@@ -146,17 +131,7 @@ DEBUGPlatformReadEntireFile(char *Filename)
 	return Result;
 }
 
-internal void 
-DEBUGPlatformFreeFileMemory(void *Memory)
-{
-	if (Memory)
-	{
-		VirtualFree(Memory, 0, MEM_RELEASE);
-	}
-}
-
-internal bool 
-DEBUGPlatformWriteEntireFile(char *Filename, uint32 MemorySize, void* Memory)
+DEBUG_PLATFORM_WRITE_ENTIRE_FILE(DEBUGPlatformWriteEntireFile)
 {
 	bool Result = false;
 
@@ -183,6 +158,59 @@ DEBUGPlatformWriteEntireFile(char *Filename, uint32 MemorySize, void* Memory)
 	}
 
 	return Result;
+}
+
+struct win32_game_code
+{
+	HMODULE GameCodeDLL;
+	game_update_and_render *UpdateAndRender;
+	game_get_sound_samples *GetSoundSamples;
+
+	bool IsValid;
+};
+
+internal win32_game_code 
+Win32LoadGameCode()
+{
+	win32_game_code Result = {};
+
+	// TODO(casey): Need to get the proper path here!
+	// TODO(casey): Automatic determination when updates are necessary.
+
+	CopyFile("handmade.dll", "handmade_temp.dll", FALSE);
+	Result.GameCodeDLL = LoadLibraryA("handmade_temp.dll");
+	if (Result.GameCodeDLL)
+	{
+		Result.UpdateAndRender = (game_update_and_render *)
+			GetProcAddress(Result.GameCodeDLL, "GameUpdateAndRender");
+		Result.GetSoundSamples = (game_get_sound_samples *)
+			GetProcAddress(Result.GameCodeDLL, "GameGetSoundSamples");
+
+		Result.IsValid = (Result.UpdateAndRender &&
+						  Result.GetSoundSamples);
+	}
+
+	if (!Result.IsValid)
+	{
+		Result.UpdateAndRender = GameUpdateAndRenderStub;
+		Result.GetSoundSamples = GameGetSoundSamplesStub;
+	}
+
+	return Result;
+}
+
+internal void 
+Win32UnloadGameCode(win32_game_code *GameCode)
+{
+	if (GameCode->GameCodeDLL)
+	{
+		FreeLibrary(GameCode->GameCodeDLL);
+		GameCode->GameCodeDLL = 0;
+	}
+
+	GameCode->IsValid = false;
+	GameCode->UpdateAndRender = GameUpdateAndRenderStub;
+	GameCode->GetSoundSamples = GameGetSoundSamplesStub;
 }
 
 // NOTE(grigory): loading dynamic libs ourselves instead of requiring direct linking
@@ -326,7 +354,7 @@ internal void Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, i
 	int BitmapMemorySize = Width * Height * BytesPerPixel;
 	Buffer->Memory = VirtualAlloc(0, BitmapMemorySize, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
 
-	//TODO probably clear to black;
+	//TODO(casey) probably clear to black;
 }
 
 internal void Win32DisplayBufferInWindow(HDC DeviceContext, 
@@ -827,6 +855,9 @@ int CALLBACK WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
 			game_memory GameMemory = {};
 			GameMemory.PermanentStorageSize = Megabytes(64);
 			GameMemory.TransientStorageSize = Gigabytes(1);
+			GameMemory.DEBUGPlatformReadEntireFile  = DEBUGPlatformReadEntireFile;
+			GameMemory.DEBUGPlatformFreeFileMemory  = DEBUGPlatformFreeFileMemory;
+			GameMemory.DEBUGPlatformWriteEntireFile = DEBUGPlatformWriteEntireFile;
 
 			// TODO(casey): Handle various memory footprints (USING SYSTEM METRICS)
 			uint64 TotalSize = GameMemory.PermanentStorageSize + GameMemory.TransientStorageSize;
@@ -859,8 +890,18 @@ int CALLBACK WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
 			DWORD AudioLatencyBytes = 0;
 			float AudioLatencySeconds = 0;
 
+			win32_game_code Game = Win32LoadGameCode();
+			uint32 LoadCounter = 0;
+
 			while (Running)
 			{
+				if (LoadCounter++ > 120)
+				{
+					Win32UnloadGameCode(&Game);
+					Game = Win32LoadGameCode();
+					LoadCounter = 1;
+				}
+
 				// TODO(casey): zeroing macro
 				// TODO(casey): we can't zero everything cause the up/down state
 				// will be wrong!!!
@@ -1014,7 +1055,7 @@ int CALLBACK WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
 				Buffer.Height = GlobalBackbuffer.Height;
 				Buffer.Pitch = GlobalBackbuffer.Pitch;
 
-				GameUpdateAndRender(&GameMemory,
+				Game.UpdateAndRender(&GameMemory,
 									NewInput,
 									&Buffer);
 
@@ -1112,7 +1153,7 @@ int CALLBACK WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
 					SoundBuffer.SampleCount = BytesToWrite / SoundOutput.BytesPerSample;
 					SoundBuffer.Samples = Samples;
 
-					GameGetSoundSamples(&GameMemory, &SoundBuffer);
+					Game.GetSoundSamples(&GameMemory, &SoundBuffer);
 
 					Win32FillSoundBuffer(&SoundOutput, ByteToLock, BytesToWrite, &SoundBuffer);
 

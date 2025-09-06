@@ -8,6 +8,28 @@
 // 0 - Not slow code allowed!
 // 1 - Slow code welcome.
 
+#include <stdint.h>
+// TODO(casey): implement sinf ourselves
+#include <math.h>
+
+#define internal 		static 
+#define global_variable static 
+#define local_persist 	static 
+
+#define Pi32 3.14159265359f
+
+// TODO(grigory): get rid of 'float' type, so we can know actual size of variables
+// btw do it using vim replace or smth
+typedef uint8_t uint8;
+typedef uint16_t uint16;
+typedef uint32_t uint32;
+typedef uint64_t uint64;
+
+typedef int8_t int8;
+typedef int16_t int16;
+typedef int32_t int32;
+typedef int64_t int64;
+
 #if HANDMADE_SLOW
 // TODO(casey): Complete assertion macro - don't worry everyone!
 #define Assert(Expression) if (!(Expression)) *(int *)0 = 0;
@@ -38,9 +60,8 @@ SafeTruncateUInt64(uint64 Value)
 // NOTE(casey): Services that the platform layer provides to the game.
 //
 
-#if HANDMADE_INTERNAL
 // TODO(grigory): paint NOTE, STUDY, IMPORTANT words beautifully
-
+#if HANDMADE_INTERNAL
 // IMPORTANT(casey):
 //
 // These are NOT for doing anything in the shipping game - they are
@@ -51,9 +72,16 @@ struct debug_read_file_result
 	uint32 ContentsSize;
 	void *Contents;
 };
-internal debug_read_file_result DEBUGPlatformReadEntireFile(char *Filename);
-internal void DEBUGPlatformFreeFileMemory(void *FileMemory);
-internal bool DEBUGPlatformWriteEntireFile(char *Filename, uint32 MemorySize, void* Memory);
+
+#define DEBUG_PLATFORM_READ_ENTIRE_FILE(name) debug_read_file_result name(char *Filename)
+typedef DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platform_read_entire_file);
+
+#define DEBUG_PLATFORM_FREE_FILE_MEMORY(name) void name(void *FileMemory)
+typedef DEBUG_PLATFORM_FREE_FILE_MEMORY(debug_platform_free_file_memory);
+
+#define DEBUG_PLATFORM_WRITE_ENTIRE_FILE(name) bool name(char *Filename, uint32 MemorySize, void* Memory)
+typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platform_write_entire_file);
+
 #endif
 
 //
@@ -144,21 +172,29 @@ struct game_memory
 							//
 	uint64 TransientStorageSize;
 	void *TransientStorage; // NOTE(casey): REQUIRED to be cleared to zero at startup
+
+	debug_platform_read_entire_file *DEBUGPlatformReadEntireFile;
+	debug_platform_free_file_memory *DEBUGPlatformFreeFileMemory;
+	debug_platform_write_entire_file *DEBUGPlatformWriteEntireFile;
 };
 
-internal void 
-GameUpdateAndRender(
-					game_memory *Memory,
-					game_input* Input,
-					game_offscreen_buffer *Buffer
-					);
+#define GAME_UPDATE_AND_RENDER(name) void name(game_memory *Memory, game_input* Input, game_offscreen_buffer *Buffer)
+typedef GAME_UPDATE_AND_RENDER(game_update_and_render);
+GAME_UPDATE_AND_RENDER(GameUpdateAndRenderStub)
+{
+	return;
+}
 
 // NOTE(casey): At the moment, this has to be a very fast function,
 // it cannot be more than a millisecond or so.
 // TODO(casey): Reduce pressure on this function's performance
 // by measuring it ot asking about it, etc.
-internal void
-GameGetSoundSamples(game_memory *Memory, game_output_sound_buffer *SoundBuffer);
+#define GAME_GET_SOUND_SAMPLES(name) void name(game_memory *Memory, game_output_sound_buffer *SoundBuffer)
+typedef GAME_GET_SOUND_SAMPLES(game_get_sound_samples);
+GAME_GET_SOUND_SAMPLES(GameGetSoundSamplesStub)
+{
+	return;
+}
 
 //
 // NOTE(grigory): stuff that platform layer dont care about 
@@ -169,5 +205,7 @@ struct game_state
 	int ToneHz;
 	int XOffset;
 	int YOffset;
+
+	float tSine;
 };
 
