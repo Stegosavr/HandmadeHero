@@ -99,6 +99,7 @@ struct game_offscreen_buffer
 	int Width;
 	int Height;
 	int Pitch;
+	int BytesPerPixel;
 };
 
 struct game_output_sound_buffer
@@ -207,5 +208,9 @@ struct game_state
 	int YOffset;
 
 	float tSine;
+
+	int PlayerX;
+	int PlayerY;
+	float tJump;
 };
 

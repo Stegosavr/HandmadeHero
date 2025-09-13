@@ -10,8 +10,12 @@ GameOutputSound(game_output_sound_buffer *SoundBuffer, game_state *GameState)
 
 	for (int SampleIndex = 0; SampleIndex < SoundBuffer->SampleCount; ++SampleIndex)
 	{
+#if 0
 		float SineValue = sinf(GameState->tSine);
 		int16 SampleValue = (int16)(SineValue * ToneVolume);
+#else
+		int16 SampleValue = 0;
+#endif
 		*SampleOut++ = SampleValue;
 		*SampleOut++ = SampleValue;
 
@@ -35,13 +39,38 @@ RenderWeirdGradient(game_offscreen_buffer *Buffer, int XOffset, int YOffset)
 			uint8 G = (uint8)(Y + YOffset);
 			//uint8 R = (uint8)(X * 2 + Y * 2 + XOffset * 2 + YOffset * 2);
 			uint8 R = 0;
-			*Pixel++ = B | (G << 8) | (R << 16);	
+			*Pixel++ = B | (G << 16) | (R << 16);	
 			/*
 			*Pixel = 0xf0ff00ff;
 			++Pixel;
 			*/
 		}
 		Row += Buffer->Pitch;
+	}
+}
+
+internal void
+RenderPlayer(game_offscreen_buffer *Buffer, int PlayerX, int PlayerY)
+{
+	uint8 *EndOfBuffer = (uint8 *)Buffer->Memory + Buffer->BytesPerPixel *
+		Buffer->Width * Buffer->Height;
+	uint32 Color = 0xFFFFFFFF;
+	int Top = PlayerY;
+	int Bottom = PlayerY + 10;
+	for (int X = PlayerX; X < PlayerX+10; ++X)
+	{
+		uint8 *Pixel = ((uint8 *)Buffer->Memory + 
+						X*Buffer->BytesPerPixel + 
+						Top*Buffer->Pitch); 
+		for (int Y = Top; Y < Bottom; ++Y)
+		{
+			if ((Pixel >= Buffer->Memory) &&
+				(Pixel < EndOfBuffer))
+			{
+				*(uint32 *)Pixel = Color;
+			}
+			Pixel += Buffer->Pitch;
+		}
 	}
 }
 
@@ -66,6 +95,9 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 #endif
 		GameState->ToneHz = 256;
 		GameState->tSine = 0.0f;
+
+		GameState->PlayerX = 100;
+		GameState->PlayerY = 100;
 
 		// TODO(casey): This may be more appropriate to do in platform layer
 		Memory->IsInitialized = true;
@@ -94,13 +126,23 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 			}
 		}
 
+		GameState->PlayerX += (int)(4.0f * Controller->StickAverageX);
+		GameState->PlayerY -= (int)(4.0f * Controller->StickAverageY);
+		float t = Pi32*2 / 90; 
+		if (GameState->tJump > 0)
+		{
+			GameState->PlayerY += (int)(5*sinf(GameState->tJump));
+		}
 		if (Controller->ActionDown.EndedDown)
 		{
-			GameState->YOffset += 1;
+			GameState->tJump = 2 * Pi32;
 		}
+		GameState->tJump -= t;
+
 	}
 
 	RenderWeirdGradient(Buffer, GameState->XOffset, GameState->YOffset);	
+	RenderPlayer(Buffer, GameState->PlayerX, GameState->PlayerY);
 }
 
 extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
@@ -108,14 +150,3 @@ extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
 	game_state *GameState = (game_state *)Memory->PermanentStorage;
 	GameOutputSound(SoundBuffer, GameState);
 }
-
-#if HANDMADE_WIN32___
-#include "windows.h"
-BOOL WINAPI DllMain(
-    HINSTANCE hinstDLL,  // handle to DLL module
-    DWORD fdwReason,     // reason for calling function
-    LPVOID lpvReserved)  // reserved
-{
-	return TRUE;
-}
-#endif

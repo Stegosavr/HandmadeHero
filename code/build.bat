@@ -11,10 +11,14 @@ pushd build
 :: NOTE(grigory) - -subsystem sheisse for winXP compatibility
 :: -MTd (instead of -MD) statically compiling c runtime lib to our exe, helps with compatibility
 
+set zeroTime=%time: =0%
+set dateTime=%date:.=%-%zeroTime::=%
+set vsPDBFix=/PDB:handmade_%dateTime%.pdb
+
 :: 32-bit build
 :: cl %CommonCompilerFlags% ..\code\win32_handmade.cpp /link -subsystem:windows,5.1 %CommonLinkerFlags% 
 
 :: 64-bit build
-cl %CommonCompilerFlags% ..\code\handmade.cpp 		-Fmhandmade.map /LD /link /EXPORT:GameGetSoundSamples /EXPORT:GameUpdateAndRender
+cl %CommonCompilerFlags% ..\code\handmade.cpp -Fmhandmade.map -LD /link -incremental:no -opt:ref -EXPORT:GameGetSoundSamples -EXPORT:GameUpdateAndRender
 cl %CommonCompilerFlags% ..\code\win32_handmade.cpp -Fmwin32_handmade.map /link %CommonLinkerFlags% 
 popd
