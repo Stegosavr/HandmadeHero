@@ -1,6 +1,6 @@
 @echo off
 
-set CommonCompilerFlags=-MT -nologo -Gm- -GR- -EHa- -Oi -Od -WX -W4 -wd4201 -wd4100 -wd4189 -wd4505 -wd4127 -DHANDMADE_SLOW=1 -DHANDMADE_INTERNAL=1 -DHANDMADE_WIN32=1 -FC -Z7
+set CommonCompilerFlags=-MTd -nologo -Gm- -GR- -EHa- -Oi -Od -WX -W4 -wd4201 -wd4100 -wd4189 -wd4505 -wd4127 -DHANDMADE_SLOW=1 -DHANDMADE_INTERNAL=1 -DHANDMADE_WIN32=1 -FC -Z7
 set CommonLinkerFlags= -incremental:no -opt:ref user32.lib Gdi32.lib Winmm.lib
 
 :: TODO - can we just build both with one exe?
@@ -11,9 +11,7 @@ pushd build
 :: NOTE(grigory) - -subsystem sheisse for winXP compatibility
 :: -MTd (instead of -MD) statically compiling c runtime lib to our exe, helps with compatibility
 
-set zeroTime=%time: =0%
-set dateTime=%date:.=%-%zeroTime::=%
-set vsPDBFix=/PDB:handmade_%dateTime%.pdb
+set vsPDBFix=-PDB:handmade_%random%.pdb
 
 :: 32-bit build
 :: cl %CommonCompilerFlags% ..\code\win32_handmade.cpp /link -subsystem:windows,5.1 %CommonLinkerFlags% 

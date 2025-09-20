@@ -39,7 +39,7 @@ RenderWeirdGradient(game_offscreen_buffer *Buffer, int XOffset, int YOffset)
 			uint8 G = (uint8)(Y + YOffset);
 			//uint8 R = (uint8)(X * 2 + Y * 2 + XOffset * 2 + YOffset * 2);
 			uint8 R = 0;
-			*Pixel++ = B | (G << 16) | (R << 16);	
+			*Pixel++ = B | (G << 8) | (R << 16);	
 			/*
 			*Pixel = 0xf0ff00ff;
 			++Pixel;
@@ -86,11 +86,11 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 	{
 		char *Filename = __FILE__;
 #if 1
-		debug_read_file_result File = Memory->DEBUGPlatformReadEntireFile(Filename);
+		debug_read_file_result File = Memory->DEBUGPlatformReadEntireFile(Thread, Filename);
 		if (File.Contents)
 		{
-			Memory->DEBUGPlatformWriteEntireFile("test.out", File.ContentsSize, File.Contents);
-			Memory->DEBUGPlatformFreeFileMemory(File.Contents);
+			Memory->DEBUGPlatformWriteEntireFile(Thread, "test.out", File.ContentsSize, File.Contents);
+			Memory->DEBUGPlatformFreeFileMemory(Thread, File.Contents);
 		}
 #endif
 		GameState->ToneHz = 256;
@@ -142,7 +142,19 @@ extern "C" GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 	}
 
 	RenderWeirdGradient(Buffer, GameState->XOffset, GameState->YOffset);	
+
 	RenderPlayer(Buffer, GameState->PlayerX, GameState->PlayerY);
+
+	for (int ButtonIndex = 0; 
+		 ButtonIndex < ArrayCount(Input->MouseButtons);
+		 ++ButtonIndex)
+	{		
+		if (Input->MouseButtons[ButtonIndex].EndedDown)
+		{
+			RenderPlayer(Buffer, ButtonIndex*10, 10);
+		}
+	}
+	RenderPlayer(Buffer, Input->MouseX, Input->MouseY);
 }
 
 extern "C" GAME_GET_SOUND_SAMPLES(GameGetSoundSamples)
