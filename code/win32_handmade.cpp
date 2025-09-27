@@ -424,11 +424,19 @@ internal void Win32DisplayBufferInWindow(HDC DeviceContext,
 										 int WindowWidth, int WindowHeight,
 										 win32_offscreen_buffer *Buffer)
 {
+	int OffsetX = 10;
+	int OffsetY = 10;
+
+	PatBlt(DeviceContext, 0, 0, OffsetX, WindowHeight, BLACKNESS);
+	PatBlt(DeviceContext, 0, 0, WindowWidth, OffsetY,  BLACKNESS);
+	PatBlt(DeviceContext, 0, OffsetY + Buffer->Height, WindowWidth, WindowHeight - OffsetY - Buffer->Height, BLACKNESS);
+	PatBlt(DeviceContext, OffsetX + Buffer->Width, 0, WindowWidth - OffsetX - Buffer->Width, WindowHeight, BLACKNESS);
+
 	// NOTE(casey): For prototyping purposesm we're going ro always blit
 	// 1-to-1 pixels to make sure we don't introduce artifacts with
 	// stretching while we are learning to code the renderer!
 	StretchDIBits(DeviceContext,
-				  0, 0, Buffer->Width, Buffer->Height, //0, 0, WindowWidth, WindowHeight,
+				  OffsetX, OffsetY, Buffer->Width, Buffer->Height, //0, 0, WindowWidth, WindowHeight,
 				  0, 0, Buffer->Width, Buffer->Height,
 				  Buffer->Memory,
 				  &Buffer->Info,
@@ -989,7 +997,7 @@ int CALLBACK WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
 
 	WNDCLASS WindowClass = {};
 
-	Win32ResizeDIBSection(&GlobalBackbuffer, 1280, 720);
+	Win32ResizeDIBSection(&GlobalBackbuffer, 960, 540);
 
 	WindowClass.style = CS_HREDRAW|CS_VREDRAW; 
 
@@ -1181,6 +1189,7 @@ int CALLBACK WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
 											 TempGameCodeDLLFullPath);
 				}
 
+				NewInput->dtForFrame = TargetSecondsPerFrame;
 				// TODO(casey): zeroing macro
 				// TODO(casey): we can't zero everything cause the up/down state
 				// will be wrong!!!
