@@ -50,30 +50,68 @@ GetController(game_input *Input, int ControllerIndex)
 // TODO(casey): swap, min, max, ... macros???
 // TODO(grigory): paint NOTE, STUDY, IMPORTANT words beautifully
 
+struct canonical_position
+{
+	// TODO(casey):
+	// Take the tile map x and y
+	// and tile x and y
+	//
+	// and pack them into single 32-bit values for x and y
+	// where there is some low bits for the tile index
+	// and the high bits are tile "page"
+	int32 TileMapX;
+	int32 TileMapY;
+
+	int32 TileX;
+	int32 TileY;
+
+	// TODO(casey):
+	// convert this to math-friendly, resolution independent representation of
+	// world units relative to a tile
+	float TileRelX;
+	float TileRelY;
+};
+
+// TODO(casey): Is this ever necessary?
+struct raw_position
+{
+	int32 TileMapX;
+	int32 TileMapY;
+
+	// NOTE(casey): tile-map relative X and Y
+	float X;
+	float Y;
+};
+
 struct tile_map
 {
-	int32 CountX;
-	int32 CountY;
-
-	float UpperLeftX;
-	float UpperLeftY;
-	float TileWidth;
-	float TileHeight;
-
 	uint32 *Tiles;
 };
 
 struct world
 {
-	// TODO(casey): Beginner's sparsness
+	float TileSideInMeters;
+	int32 TileSideInPixels;
+
 	int32 CountX;
 	int32 CountY;
+
+	float UpperLeftX;
+	float UpperLeftY;
+
+	// TODO(casey): Beginner's sparsness
+	int32 TileMapCountX;
+	int32 TileMapCountY;
 
 	tile_map *TileMaps;
 };
 
 struct game_state
 {
+	// TODO(casey): Should be canonical pos now?
+	int32 PlayerTileMapX;
+	int32 PlayerTileMapY;
+
 	float PlayerX;
 	float PlayerY;
 };
