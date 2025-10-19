@@ -50,68 +50,62 @@ GetController(game_input *Input, int ControllerIndex)
 // TODO(casey): swap, min, max, ... macros???
 // TODO(grigory): paint NOTE, STUDY, IMPORTANT words beautifully
 
-struct canonical_position
+//
+//
+//
+
+#include "handmade_tile.h"
+#include "handmade_intrinsics.h"
+
+struct memory_arena
 {
-	// TODO(casey):
-	// Take the tile map x and y
-	// and tile x and y
-	//
-	// and pack them into single 32-bit values for x and y
-	// where there is some low bits for the tile index
-	// and the high bits are tile "page"
-	int32 TileMapX;
-	int32 TileMapY;
-
-	int32 TileX;
-	int32 TileY;
-
-	// TODO(casey):
-	// convert this to math-friendly, resolution independent representation of
-	// world units relative to a tile
-	float TileRelX;
-	float TileRelY;
+	memory_index Size;
+	memory_index Used;
+	uint8 *Base;
 };
 
-// TODO(casey): Is this ever necessary?
-struct raw_position
+internal void
+InitializeArena(memory_arena *Arena, memory_index Size, uint8 *Base)
 {
-	int32 TileMapX;
-	int32 TileMapY;
+	Arena->Size = Size;
+	Arena->Base = Base;
+	Arena->Used = 0;
+}
 
-	// NOTE(casey): tile-map relative X and Y
-	float X;
-	float Y;
-};
-
-struct tile_map
+#define PushStruct(Arena, type) ((type *)PushSize_(Arena, sizeof(type)))
+#define PushArray(Arena, Count, type) ((type *)PushSize_(Arena, (Count)*sizeof(type)))
+internal void *
+PushSize_(memory_arena *Arena, memory_index Size)
 {
-	uint32 *Tiles;
-};
+	Assert((Arena->Used + Size) <= Arena->Size);
+	void *Result = Arena->Base + Arena->Used;
+	Arena->Used += Size;
+
+	return Result;
+}
 
 struct world
 {
-	float TileSideInMeters;
-	int32 TileSideInPixels;
+	tile_map *TileMap;
+};
 
-	int32 CountX;
-	int32 CountY;
+struct loaded_bitmap
+{
 
-	float UpperLeftX;
-	float UpperLeftY;
-
-	// TODO(casey): Beginner's sparsness
-	int32 TileMapCountX;
-	int32 TileMapCountY;
-
-	tile_map *TileMaps;
+	int32 Width;
+	int32 Height;
+	uint32 *Pixels;
 };
 
 struct game_state
 {
-	// TODO(casey): Should be canonical pos now?
-	int32 PlayerTileMapX;
-	int32 PlayerTileMapY;
+	memory_arena WorldArena;
+	world *World;
 
-	float PlayerX;
-	float PlayerY;
+	tile_map_position PlayerP;
+
+	loaded_bitmap Backdrop;
+	loaded_bitmap HeroHead;
+	loaded_bitmap HeroCape;
+	loaded_bitmap HeroTorso;
 };

@@ -1,5 +1,36 @@
 #include <stdint.h>
 
+//
+// NOTE(casey): compilers
+//
+
+#ifndef COMPILER_MSVC
+#define COMPILER_MSVC 0
+#endif
+
+#ifndef COMPILER_LLVM
+#define COMPILER_LLVM 0
+#endif
+
+#if !COMPILER_MSVC && !COMPILER_LLVM
+ #if _MSC_VER
+  #undef COMPILER_MSVC
+  #define COMPILER_MSVC 1
+ #else
+  // TODO(casey): Moar compilerz!!!
+  #undef COMPILER_LLVM
+  #define COMPILER_LLVM 1
+ #endif
+#endif
+
+#if COMPILER_MSVC
+#include <intrin.h>
+#endif
+
+//
+// NOTE(casey): types
+//
+
 // TODO(grigory): get rid of 'float' type, so we can know actual size of variables
 // btw do it using vim replace or smth
 typedef uint8_t uint8;
@@ -11,6 +42,8 @@ typedef int8_t int8;
 typedef int16_t int16;
 typedef int32_t int32;
 typedef int64_t int64;
+
+typedef size_t memory_index;
 
 
 // NOTE(grigory): This struct should be passed to all game code calls 

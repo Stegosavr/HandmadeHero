@@ -620,6 +620,7 @@ Win32GetInputFileLocation(win32_state *State, bool InputStream, int SlotIndex,
 internal win32_replay_buffer *
 Win32GetReplayBuffer(win32_state *State, int Index)
 { 
+	Assert(Index > 0);
 	Assert(Index < ArrayCount(State->ReplayBuffers));
 	win32_replay_buffer *Result = &State->ReplayBuffers[Index];
 	return Result;
@@ -997,6 +998,7 @@ int CALLBACK WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
 
 	WNDCLASS WindowClass = {};
 
+	// NOTE(casey): 1080p display mode is 1920x1080 -> half is 960x540
 	Win32ResizeDIBSection(&GlobalBackbuffer, 960, 540);
 
 	WindowClass.style = CS_HREDRAW|CS_VREDRAW; 
@@ -1038,7 +1040,7 @@ int CALLBACK WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
 			{
 				MonitorRefreshHz = Win32RefreshRate;
 			}
-			float GameUpdateHz = MonitorRefreshHz / 2.0f;
+			float GameUpdateHz = MonitorRefreshHz / 1.0f;
 			float TargetSecondsPerFrame = 1.0f / (float)GameUpdateHz;
 
 
@@ -1094,6 +1096,9 @@ int CALLBACK WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
 			GameMemory.DEBUGPlatformWriteEntireFile = DEBUGPlatformWriteEntireFile;
 
 			// TODO(casey): Handle various memory footprints (USING SYSTEM METRICS)
+			// TODO(casey): Transient storage needs to be broken up
+			// into game transient andt cache transient, and only the
+			// former needs to be saved for state playback
 			Win32State.TotalSize = GameMemory.PermanentStorageSize + GameMemory.TransientStorageSize;
 
 			// TODO(casey): USE MEM_LARGE_PAGES and call adjust token priveleges
@@ -1108,7 +1113,7 @@ int CALLBACK WinMain(HINSTANCE Instance, HINSTANCE PrevInstance,
 			GameMemory.PermanentStorage = Win32State.GameMemoryBlock;
 			GameMemory.TransientStorage = (uint8 *)GameMemory.PermanentStorage + GameMemory.PermanentStorageSize;
 
-			for (int ReplayIndex = 0;
+			for (int ReplayIndex = 1;
 				 ReplayIndex < ArrayCount(Win32State.ReplayBuffers);
 				 ++ReplayIndex)
 			{
