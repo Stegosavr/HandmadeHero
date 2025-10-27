@@ -1,4 +1,12 @@
-#include <stdint.h>
+// NOTE(casey):
+//
+// HANDMADE_INTERNAL:
+// 0 - Build for public release
+// 1 - Build for developer only
+//
+// HANDMADE_SLOW:
+// 0 - Not slow code allowed!
+// 1 - Slow code welcome.
 
 //
 // NOTE(casey): compilers
@@ -30,6 +38,8 @@
 //
 // NOTE(casey): types
 //
+#include <stdint.h>
+#include <stddef.h>
 
 // TODO(grigory): get rid of 'float' type, so we can know actual size of variables
 // btw do it using vim replace or smth
@@ -45,6 +55,35 @@ typedef int64_t int64;
 
 typedef size_t memory_index;
 
+#define internal 		static 
+#define global_variable static 
+#define local_persist 	static 
+
+#define Pi32 3.14159265359f
+
+#if HANDMADE_SLOW
+// TODO(casey): Complete assertion macro - don't worry everyone!
+#define Assert(Expression) if (!(Expression)) *(int *)0 = 0;
+#else
+#define Assert(Expression)
+#endif
+
+// TODO(casey): should we do it alwaye in 64bit?
+#define Kilobytes(Value) ((Value)*1024ULL)
+#define Megabytes(Value) (Kilobytes(Value)*1024ULL)
+#define Gigabytes(Value) (Megabytes(Value)*1024ULL)
+#define Terabytes(Value) (Gigabytes(Value)*1024ULL)
+
+#define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
+
+internal inline uint32
+SafeTruncateUInt64(uint64 Value)
+{
+	// TODO(casey): Defines for maximum values
+	Assert(Value <= 0xFFFFFFFF);
+	uint32 Result = (uint32)Value;
+	return Result;
+}
 
 // NOTE(grigory): This struct should be passed to all game code calls 
 // in order to know from which thread we are running. Its unused for now
@@ -140,6 +179,13 @@ struct game_input
 	float dtForFrame;
 	game_controller_input Controllers[5];
 };
+
+inline internal game_controller_input *
+GetController(game_input *Input, int ControllerIndex)
+{
+	Assert(ControllerIndex < ArrayCount(Input->Controllers));
+	return &Input->Controllers[ControllerIndex];
+}
 
 
 struct game_memory

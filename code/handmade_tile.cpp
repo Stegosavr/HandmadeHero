@@ -161,8 +161,8 @@ RecanonicalizePosition(tile_map *TileMap, tile_map_position Pos)
 {
 	tile_map_position Result = Pos;
 
-	RecanonicalizeCoord(TileMap, &Result.AbsTileX, &Result.OffsetX);
-	RecanonicalizeCoord(TileMap, &Result.AbsTileY, &Result.OffsetY);
+	RecanonicalizeCoord(TileMap, &Result.AbsTileX, &Result.Offset.X);
+	RecanonicalizeCoord(TileMap, &Result.AbsTileY, &Result.Offset.Y);
 
 	return Result;
 }
@@ -173,6 +173,22 @@ AreOnSameTile(tile_map_position A, tile_map_position B)
 	bool Result = ((A.AbsTileX == B.AbsTileX) &&
 				   (A.AbsTileY == B.AbsTileY) &&
 				   (A.AbsTileZ == B.AbsTileZ));
+
+	return Result;
+}
+
+inline tile_map_difference
+Subtract(tile_map *TileMap, tile_map_position A, tile_map_position B)
+{
+	tile_map_difference Result;
+
+	v2 dTileXY = {(float)A.AbsTileX - (float)B.AbsTileX,
+				  (float)A.AbsTileY - (float)B.AbsTileY};
+	float dTileZ = (float)A.AbsTileZ - (float)B.AbsTileZ;
+
+	Result.dXY = TileMap->TileSideInMeters*dTileXY + (A.Offset - B.Offset);
+	// TODO(casey): Think about what we want to do about Z
+	Result.dZ = TileMap->TileSideInMeters*dTileZ;
 
 	return Result;
 }

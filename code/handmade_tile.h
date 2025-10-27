@@ -1,3 +1,9 @@
+struct tile_map_difference
+{
+	v2 dXY;
+	float dZ;
+};
+
 struct tile_map_position
 {
 	// NOTE(casey): these are fixed point tile locations.
@@ -8,8 +14,7 @@ struct tile_map_position
 	uint32 AbsTileZ;
 
 	// NOTE(casey): These are the offsets from tile center 
-	float OffsetX;
-	float OffsetY;
+	v2 Offset;
 };
 
 struct tile_chunk_position
